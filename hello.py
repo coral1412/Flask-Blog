@@ -1,3 +1,4 @@
+#coding=utf-8
 from flask import Flask,render_template,session,redirect,url_for,flash
 from flask_script import Manager
 from flask_bootstrap import Bootstrap
@@ -9,6 +10,7 @@ from wtforms.validators import Required
 from flask_sqlalchemy import SQLAlchemy
 import os
 from flask_mail import Mail,Message
+from threading import Thread
 
 basedir=os.path.abspath(os.path.dirname(__file__))
 
@@ -24,9 +26,9 @@ app.config['MAIL_PORT']=465
 app.config['MAIL_USE_SSL']=True
 app.config['MAIL_USERNAME']=os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD']=os.environ.get('MAIL_PASSWORD')
-app.config['FLASKY_MAIL_SUBJECT_PREFIX']='[Flasky]'
-app.config['FLASKY_MAIL_SENDER']='gyc1412@163.com'
-app.config['FLASKY_ADMIN']=os.environ.get('FLASKY_ADMIN')
+#app.config['FLASKY_MAIL_SUBJECT_PREFIX']='[Flasky]'
+#app.config['FLASKY_MAIL_SENDER']='gyc1412@163.com'
+#app.config['FLASKY_ADMIN']=os.environ.get('FLASKY_ADMIN')
 mail=Mail(app)
 
 app.config['SECRET_KEY']="haha"
@@ -37,35 +39,50 @@ app.config['SQLALCHEMY_TRACK_MODIFICANTS']=True
 db=SQLAlchemy(app)
 
 
-def sender_mail(to,subject,template,**kwargs):
-    msg=Message(app.config['FLASKY_MAIL_SUBJECT_PREFIX']+subject,sender=app.config['FLASKY_MAIL_SENDER'],recipients=[to])
-    msg.body=render_template(template+'.txt',**kwargs)
-    msg.body=render_template(template +'.html',**kwargs)
-    msg.html=render_template(template +'.html',**kwargs)
+#def sender_mail(to,subject,template,**kwargs):
+#    msg=Message(app.config['FLASKY_MAIL_SUBJECT_PREFIX']+subject,sender=app.config['FLASKY_MAIL_SENDER'],recipients=[to])
+#    msg.body=render_template(template+'.txt',**kwargs)
+#    msg.body=render_template(template +'.html',**kwargs)
+#    msg.html=render_template(template +'.html',**kwargs)
+#    mail.send(msg)
+def send_async_email(app,msg):
+    with app.app_context():
+        mail.send(msg)
+
+
+@app.route('/mail')
+def mail():
+    msg=Message('subject',sender=os.environ.get('MAIL_USERNAME'),recipients=['gyc1412@163.com','295854115@qq.com'])
+    msg.body="text body"
+    msg.html='<b>HTML</b> body'
+
+    thread=Thread(target=send_async_email,args=[app,msg])
+    thread.start()
     mail.send(msg)
+    return '<h1>异步发送邮件成功！</h1>'
 
 
-@app.route('/',methods=['GET','POST'])
-def index():
-    form=NameForm()
-    if form.validate_on_submit():
-        #old_name=session.get('name')
-        user=User.query.filter_by(username=form.name.data).first()
-        if user is None:
-            user=User(username=form.name.data)
-            db.session.add(user)
-            session['known']=False
-            if app.config['FLASKY_ADMIN']:
-                send_mail(app.config['FLASKY_ADMIN'],'New User','mail/new_user',user=user)
-    else:
-        session['known']=True
-        session['name']=form.name.data
-        return redirect(url_for('index'))
-        #if old_name is not None and old_name !=form.name.data:
-        #    flash('Looks like you have changed your name!')
-        #session['name']=form.name.data
-        #return redirect(url_for('index'))
-    return render_template('index.html',form=form,name=session.get('name'),known=session.get('known',False))
+#@app.route('/',methods=['GET','POST'])
+#def index():
+#    form=NameForm()
+#    if form.validate_on_submit():
+#        #old_name=session.get('name')
+#        user=User.query.filter_by(username=form.name.data).first()
+#        if user is None:
+#            user=User(username=form.name.data)
+#            db.session.add(user)
+#            session['known']=False
+#            if app.config['FLASKY_ADMIN']:
+#                send_mail(app.config['FLASKY_ADMIN'],'New User','mail/new_user',user=user)
+#    else:
+#        session['known']=True
+#        session['name']=form.name.data
+#        return redirect(url_for('index'))
+#        #if old_name is not None and old_name !=form.name.data:
+#        #    flash('Looks like you have changed your name!')
+#        #session['name']=form.name.data
+#        #return redirect(url_for('index'))
+#    return render_template('index.html',form=form,name=session.get('name'),known=session.get('known',False))
 
 @app.route('/user/<name>')
 def  user(name):
