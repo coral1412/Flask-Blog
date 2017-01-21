@@ -97,13 +97,10 @@ def page_not_found(e):
 def internal_server_error(e):
     return render_template("500.html"),500
 
-
 #flask_wtf
 class NameForm(Form):
-
     name=StringField('what is your name?',validators=[Required()])
     submit=SubmitField('Submit')
-
 
 #databases
 class Role(db.Model):
@@ -121,10 +118,8 @@ class User(db.Model):
     username=db.Column(db.String(64),unique=True,index=True)
     role_id=db.Column(db.Integer,db.ForeignKey('roles.id'))
 
-
     def __repr__(self):
         return '<User %r>' % self.username
-
 
 if __name__=='__main__':
     manager.run()
